@@ -37,6 +37,9 @@ function This_MOD.start()
         end
     end
 
+    --- Aplicar el cambio en otro MOD
+    This_MOD.update_compacts()
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
 
@@ -171,6 +174,226 @@ function This_MOD.update_item(space)
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
     space.item.stack_size = space.amount
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+end
+
+---------------------------------------------------------------------------------------------------
+
+
+
+
+
+---------------------------------------------------------------------------------------------------
+---[ Cambios en los compactados ]---
+---------------------------------------------------------------------------------------------------
+
+function This_MOD.update_compacts()
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Validación
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local d12b = GMOD.d12b
+    if not d12b then return end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Valores a usar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local Delete = {}
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Obtener los datos a eliminar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function get_elements(recipe)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        --- Validar el tipo
+        if recipe.type ~= "recipe" then return end
+        if not GMOD.has_id(recipe.name, d12b.id) then return end
+        if not GMOD.has_id(recipe.name, d12b.category_do) then return end
+
+        --- Validar contenido
+        if #recipe.ingredients ~= 1 then return end
+        if #recipe.results ~= 1 then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Obtiener la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        local Space = {}
+
+        Space.item_do = GMOD.items[recipe.results[1].name]
+        Space.item_undo = GMOD.items[recipe.ingredients[1].name]
+
+        Space.recipe_do = recipe
+        Space.recipe_undo = recipe.name:gsub(
+            d12b.category_do .. "%-",
+            d12b.category_undo .. "-"
+        )
+        Space.recipe_undo = data.raw.recipe[Space.recipe_undo]
+
+        Space.tech_do = GMOD.get_technology(Space.recipe_do, true)
+        Space.tech_undo = GMOD.get_technology(Space.recipe_undo, true)
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Buscar lo que se crea
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        if Space.item_do.place_result then
+            Space.entity = GMOD.entities[Space.item_do.place_result]
+        end
+
+        if Space.item_do.place_as_tile then
+            Space.tiles = GMOD.tiles[Space.item_do.name] or {}
+            Space.tile_1 = Space.tiles[1]
+            Space.tile_2 = Space.tiles[2]
+        end
+
+        if Space.item_do.place_as_equipment_result then
+            Space.equipment = GMOD.equipments[Space.item_do.place_as_equipment_result]
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Guardar la información
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        return Space, {
+            Space.item_do,
+
+            Space.recipe_do,
+            Space.recipe_undo,
+
+            Space.tech_do,
+            Space.tech_undo,
+
+            Space.entity,
+            Space.equipment,
+            Space.tile_1,
+            Space.tile_2,
+        }
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Eliminar los elementos
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    local function delete_elements(space, each)
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Validación
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        if not each then return end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Eliminar los prototipos de data
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        for _, element in pairs(each) do
+            data.raw[element.type][element.name] = nil
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+        --- Eliminar los prototipos de GMOD
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+        GMOD.items[space.item_do.name] = nil
+        GMOD.recipes[space.item_do.name] = nil
+        table.remove(
+            GMOD.recipes[space.item_undo.name],
+            GMOD.get_key(
+                GMOD.recipes[space.item_undo.name],
+                space.recipe_undo
+            )
+        )
+
+        if space.equipment then
+            GMOD.equipments[space.item_do.name] = nil
+        end
+
+        if space.entity then
+            GMOD.entities[space.item_do.name] = nil
+        end
+
+        if space.tiles then
+            GMOD.tiles[space.item_do.name] = nil
+        end
+
+        --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    end
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+
+
+
+
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+    --- Buscar los datos a eliminar
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+    --- Buscar y eliminar los elementos
+    for _, recipe in pairs(data.raw.recipe) do
+        delete_elements(get_elements(recipe))
+    end
+
+    --- Crear los nuevos objetos
+    if GMOD.d13b then
+        GMOD.d13b.start()
+    else
+        d12b.start()
+    end
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
