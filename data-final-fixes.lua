@@ -195,16 +195,7 @@ function This_MOD.update_compacts()
 
     local d12b = GMOD.d12b
     if not d12b then return end
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-
-
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-    --- Valores a usar
-    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-
-    local Delete = {}
+    local d13b = GMOD.d13b
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -286,7 +277,7 @@ function This_MOD.update_compacts()
 
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-        --- Guardar la información
+        --- Devolver el resultado
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
         return Space, {
@@ -317,12 +308,12 @@ function This_MOD.update_compacts()
     --- Eliminar los elementos
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-    local function delete_elements(space, each)
+    local function delete_elements(space, delete)
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
         --- Validación
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        if not each then return end
+        if not delete then return end
 
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
@@ -334,7 +325,7 @@ function This_MOD.update_compacts()
         --- Eliminar los prototipos de data
         --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 
-        for _, element in pairs(each) do
+        for _, element in pairs(delete) do
             data.raw[element.type][element.name] = nil
         end
 
@@ -389,11 +380,7 @@ function This_MOD.update_compacts()
     end
 
     --- Crear los nuevos objetos
-    if GMOD.d13b then
-        GMOD.d13b.start()
-    else
-        d12b.start()
-    end
+    (d13b and d13b or d12b).start()
 
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 end
